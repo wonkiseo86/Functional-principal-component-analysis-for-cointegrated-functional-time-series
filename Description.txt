@@ -1,0 +1,3 @@
+rank_test_simulation : for simulation results given in Table 1.
+Empirical 1: results given in Section 5.
+Empirical 2: results given in Section S5.

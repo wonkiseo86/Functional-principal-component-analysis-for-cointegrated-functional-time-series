@@ -1,0 +1,379 @@
+### Setups ####                                    
+library(fda);library(tseries);library(sandwich);library(sde);library(variables);library(basefun);library(polynom);library(expm);library(matrixStats)
+
+setwd("C:/code_location")
+inner = dget("inprod.R")
+operator = dget("operator.R")
+lrvar = dget("lrvar_6a.R")
+
+nint<-function(f)  ## numerical integration on [0, 1]
+{
+  leng<-t[2]-t[1];  I1<-f;  fac1<-(sum(leng*I1[1:(length(I1)-1)])+sum(leng*I1[2:length(I1)]))/2;  fac1
+} 
+
+ini.seed=99999999;NNOBSS=c(250,500);fac=1;ARDfac=0.95;ARDARD=0.95;tsim = 2000;FAC=c(1/3,2/5);cutt=6;sett1=1:cutt;sett2=(cutt+1):18;sdim=10;noncoeff=0.5;kernel=1
+minu=0;maxu=0.5 ##  set this to "minu=0.5; maxu=0.7" to obtain the remaining results.
+   
+for (adddim in c(1))
+{
+MEAN=1;nnbasis=20;geigen = geigen::geigen;nt = 200;t = (0:(nt-1))/(nt-1);neigen = 12   
+lbnumber=neigen+1
+basis = matrix(NA,nrow = nt , ncol = neigen)
+for (i in 1:(neigen/2)){
+  basis[,2*i-1] = sqrt(2)*sin(2*pi*i*t)/sqrt(inner(sqrt(2)*sin(2*pi*i*t),sqrt(2)*sin(2*pi*i*t),t))
+  basis[,2*i] = sqrt(2)*cos(2*pi*i*t)/sqrt(inner(sqrt(2)*cos(2*pi*i*t),sqrt(2)*cos(2*pi*i*t),t))
+}
+LB = cbind(rep(1,nt),basis[,1:neigen])
+for(i in 1:ncol(LB))
+{
+  LB[,i] = LB[,i]/(sqrt(inner(LB[,i],LB[,i],t)))
+}       
+
+lbnumber2=80
+basis2 = matrix(NA,nrow = nt , ncol = lbnumber2)
+for (i in 1:(lbnumber2/2)){
+  basis2[,2*i-1] = sqrt(2)*sin(2*pi*i*t)/sqrt(inner(sqrt(2)*sin(2*pi*i*t),sqrt(2)*sin(2*pi*i*t),t))
+  basis2[,2*i] = sqrt(2)*cos(2*pi*i*t)/sqrt(inner(sqrt(2)*cos(2*pi*i*t),sqrt(2)*cos(2*pi*i*t),t))
+}
+LBB = cbind(rep(1,nt),basis2[,1:lbnumber2])
+for(i in 1:ncol(LBB))
+{
+  LBB[,i] = LBB[,i]/(sqrt(inner(LBB[,i],LBB[,i],t)))
+} 
+basis_fn = create.bspline.basis(rangeval = c(min(t),max(t)), nbasis = nnbasis, norder=3)
+lbnumber=neigen+1
+lbb<- Legendre_basis(numeric_var("x", support = c(0, 1)),order = lbnumber)
+lb=lbb(t)
+LB2=matrix(0,nrow=length(t),ncol=lbnumber)
+for(i in 1:lbnumber)
+{
+  LB2[,i] = lb[,i]/(sqrt(inner(lb[,i],lb[,i],t)))
+} 
+basismu = LB2
+
+TEST1=NULL;TESTP1=NULL;TEST2=NULL;TESTP2=NULL;TEST3=NULL;TESTP3=NULL;TEST4=NULL;TESTP4=NULL;TEST5=NULL;TESTP5=NULL;TEST0=NULL;TESTP0=NULL
+WTEST1=NULL;WTESTP1=NULL;WTEST2=NULL;WTESTP2=NULL;WTEST3=NULL;WTESTP3=NULL;WTEST4=NULL;WTESTP4=NULL;WTEST5=NULL;WTESTP5=NULL;WTEST0=NULL;WTESTP0=NULL
+TEST1N=NULL;TESTP1N=NULL;TEST2N=NULL;TESTP2N=NULL;TEST3N=NULL;TESTP3N=NULL;TEST4N=NULL;TESTP4N=NULL;TEST5N=NULL;TESTP5N=NULL;TEST0N=NULL;TESTP0N=NULL
+WTEST1N=NULL;WTESTP1N=NULL;WTEST2N=NULL;WTESTP2N=NULL;WTEST3N=NULL;WTESTP3N=NULL;WTEST4N=NULL;WTESTP4N=NULL;WTEST5N=NULL;WTESTP5N=NULL;WTEST0N=NULL;WTESTP0N=NULL
+
+
+LB=LBB[,1:30]
+for (x_dim in 4:1)
+{
+ranseed=ini.seed;set.seed(ranseed)
+for (iter in 1:tsim){
+if (x_dim==1&adddim==1){cvv=0.32};if (x_dim==2&adddim==1){cvv=0.22};if (x_dim==3&adddim==1){cvv=0.16};if (x_dim==4&adddim==1){cvv=0.12};if (x_dim==5&adddim==1){cvv=0.097}
+if (x_dim==1&adddim==2){cvv=0.53};if (x_dim==2&adddim==2){cvv=0.37};if (x_dim==3&adddim==2){cvv=0.27};if (x_dim==4&adddim==2){cvv=0.21};
+if (x_dim==1&adddim==3){cvv=0.72};if (x_dim==2&adddim==3){cvv=0.52};if (x_dim==3&adddim==3){cvv=0.38};if (x_dim==4&adddim==3){cvv=0.2904}
+if (MEAN==1) {
+  aa=rnorm(4,0,1); bb=aa/sqrt(sum(aa^2)) ; mu=basismu[,1:4]%*%bb} else{mu=LB[,1]*0}  
+  eigenxx=runif(sdim,minu,maxu);  eigen_xp  = append(runif(x_dim+1,-noncoeff,noncoeff),eigenxx);  eigen_x = append(eigen_xp[1:x_dim],eigenxx) 
+  att1a=sample(sett1,x_dim+1);att1=att1a[1:x_dim];att2=sample(sett2,sdim);rpert1=append(att1,att2);rpert2=append(att1a,att2)                
+  nnnn=max(NNOBSS);basis_x = LB[,rpert1];basis_xp = LB[,rpert2]
+  eta = matrix(rep(NA,((nnnn+70)*nt)),ncol=nnnn+70) 
+  eta[,1] = LBB%*%cbind(rnorm(lbnumber2+1,0,1)*ARDfac^(0:(lbnumber2)))
+  eta2 = eta;  x_mat = eta;  xp_mat = eta;  pnx_mat = eta;  pnx_mat_p = eta;  psx_mat = eta;  psx_mat_p = eta
+  x_mat[,1] =   LBB%*%cbind(rnorm(lbnumber2+1,0,1)*ARDfac^(0:(lbnumber2)))
+  xp_mat[,1] =   x_mat[,1]
+  
+  for (jiter in 2:((nnnn+70))){
+    eta2[,jiter] = LBB%*%cbind(rnorm(lbnumber2+1,0,1)*ARDfac^(0:(lbnumber2)))
+    x_mat[,jiter] = operator(basis_x,eigen_x, x_mat[,jiter-1] ,t) +1*eta2[,jiter]  
+    xp_mat[,jiter] = operator(basis_xp,eigen_xp, xp_mat[,jiter-1] ,t) +1*eta2[,jiter]  
+    aa=0; bb=0   	
+    for ( jjij in 1:x_dim)
+    { 
+    aa=aa+inner(x_mat[,jiter],basis_x[,jjij],t)*basis_x[,jjij]
+    bb=bb+inner(xp_mat[,jiter],basis_xp[,jjij],t)*basis_xp[,jjij]
+    }
+    bb=bb+inner(xp_mat[,jiter],basis_xp[,x_dim+1],t)*basis_xp[,x_dim+1]	
+    pnx_mat[,jiter] = aa  
+    pnx_mat_p[,jiter] = bb
+    psx_mat[,jiter] = x_mat[,jiter] - aa     + mu
+    psx_mat_p[,jiter] = xp_mat[,jiter] - bb   + mu
+    }
+  
+  nx_mat=t(apply(pnx_mat, 1, cumsum));  nx_mat_p=t(apply(pnx_mat_p, 1, cumsum))
+  x_mat= nx_mat+psx_mat;  xp_mat = nx_mat_p + psx_mat_p 
+  x_mat=x_mat[,71:ncol(x_mat)];  xp_mat=xp_mat[,71:ncol(xp_mat)]
+  X_MAT=x_mat;  XP_MAT=xp_mat;  AA1=NULL
+  
+  for(nobs in NNOBSS)
+  { 
+  AAA1=NULL;  x_mat=X_MAT[,1:nobs]
+  if (MEAN==1) {fd_x = center.fd(Data2fd(y=x_mat,argvals = t,basisobj = basis_fn))}
+  if (MEAN==0) {fd_x = (Data2fd(y=x_mat,argvals = t,basisobj = basis_fn,lambda=llamd))}   
+  
+  for(fac in FAC)
+  {
+  band=1*nobs^(fac)
+  PCAA<- pca.fd(fd_x, nharm = nnbasis, centerfns = FALSE)
+  truc=15; px = cbind(PCAA$scores[,1:truc])
+  pn=cbind(px[,1:x_dim])
+  dpn=diff(pn)
+  dps=px[2:nrow(px),(x_dim+1):truc]
+  LLR1=lrvar(cbind(dpn,dps),cbind(dpn,dps),side=2)
+  OOMM=LLR1$omega
+  OOMM1=lrvar(cbind(dpn,dps),cbind(dpn,dps),side=1)$omega
+  pxn=px[2:nrow(px),]
+  ZEROS=NULL
+  for(i in 1:x_dim)
+  {
+  ZEROS=rbind(ZEROS,rep(0,nrow(dpn)))
+  }
+  mX=t(t(px[2:nrow(px),])-rbind(ZEROS, (OOMM[(x_dim+1):truc,1:x_dim]%*%solve(OOMM[1:x_dim,1:x_dim]) %*% t(dpn))) )
+  for(i in 1:ncol(mX))
+  {
+  mX[,i]=mX[,i]-mean(mX[,i])
+  }
+  cov1=t(mX)%*%(mX) /nobs
+  cov1[1:x_dim,(x_dim+1):truc] = cov1[1:x_dim,(x_dim+1):truc] -  OOMM1[1:x_dim,(x_dim+1):truc]+OOMM1[1:x_dim,1:x_dim]%*%solve(OOMM[1:x_dim,1:x_dim])%*%OOMM[1:x_dim,(x_dim+1):truc]
+  cov1[(x_dim+1):truc,1:x_dim] =  cov1[(x_dim+1):truc,1:x_dim] - t( OOMM1[1:x_dim,(x_dim+1):truc]-OOMM1[1:x_dim,1:x_dim]%*%solve(OOMM[1:x_dim,1:x_dim])%*%OOMM[1:x_dim,(x_dim+1):truc])
+  
+  y=mX;  SS0=cov1; EIGEN0=eigen(SS0,symmetric=TRUE)$vectors
+  
+  yyy=t(t(EIGEN0)%*%t(y))
+  lrv10=OOMM[(x_dim+1):truc,(x_dim+1):truc] - (OOMM[(x_dim+1):truc,1:x_dim])%*%solve(OOMM[1:x_dim,1:x_dim])%*%(OOMM[1:x_dim,(x_dim+1):truc])
+  lrv100= matrix(0,nrow=truc,ncol=truc)
+  lrv100[(x_dim+1):truc,(x_dim+1):truc] = lrv10 
+  truc=x_dim+adddim
+  py=yyy[,1:truc]
+  NNOBS=nobs-1
+  pyz=as.matrix(py[,(truc-adddim+1):truc],ncol=adddim)
+  lrv1=lrvar(cbind(pyz),cbind(pyz),side=2)$omega
+  ppyz=colCumsums(pyz)
+  aa=sum(diag(ppyz%*%solve(lrv1)%*%t(ppyz)))/(NNOBS^2)
+  AAA1=append(AAA1,aa)
+} 
+AA1=append(AA1,AAA1)
+}
+
+  if  (AA1[1] < cvv & x_dim==1){TEST1=append(TEST1,0)}; if  (AA1[1] >= cvv & x_dim==1){TEST1=append(TEST1,1)};  if  (AA1[1] < cvv & x_dim==2){TEST2=append(TEST2,0)}
+  if  (AA1[1] >= cvv & x_dim==2){TEST2=append(TEST2,1)};  if  (AA1[1]< cvv & x_dim==3){TEST3=append(TEST3,0)};  if  (AA1[1] >= cvv & x_dim==3){TEST3=append(TEST3,1)}
+  if  (AA1[1] < cvv & x_dim==4){TEST4=append(TEST4,0)};  if  (AA1[1]>= cvv & x_dim==4){TEST4=append(TEST4,1)};  if  (AA1[1] < cvv & x_dim==5){TEST5=append(TEST5,0)}
+  if  (AA1[1]>= cvv & x_dim==5){TEST5=append(TEST5,1)};  if  (AA1[3] < cvv & x_dim==1){TEST1N=append(TEST1N,0)};  if  (AA1[3] >= cvv & x_dim==1){TEST1N=append(TEST1N,1)}
+  if  (AA1[3] < cvv & x_dim==2){TEST2N=append(TEST2N,0)};  if  (AA1[3] >= cvv & x_dim==2){TEST2N=append(TEST2N,1)};  if  (AA1[3]< cvv & x_dim==3){TEST3N=append(TEST3N,0)}
+  if  (AA1[3] >= cvv & x_dim==3){TEST3N=append(TEST3N,1)};  if  (AA1[3] < cvv & x_dim==4){TEST4N=append(TEST4N,0)};  if  (AA1[3]>= cvv & x_dim==4){TEST4N=append(TEST4N,1)}
+  if  (AA1[3] < cvv & x_dim==5){TEST5N=append(TEST5N,0)};  if  (AA1[3]>= cvv & x_dim==5){TEST5N=append(TEST5N,1)}
+    
+  if  (AA1[2] < cvv & x_dim==1){WTEST1=append(WTEST1,0)};  if  (AA1[2] >= cvv & x_dim==1){WTEST1=append(WTEST1,1)};  if  (AA1[2] < cvv & x_dim==2){WTEST2=append(WTEST2,0)}
+  if  (AA1[2] >= cvv & x_dim==2){WTEST2=append(WTEST2,1)};  if  (AA1[2]< cvv & x_dim==3){WTEST3=append(WTEST3,0)};  if  (AA1[2] >= cvv & x_dim==3){WTEST3=append(WTEST3,1)}
+  if  (AA1[2] < cvv & x_dim==4){WTEST4=append(WTEST4,0)};  if  (AA1[2]>= cvv & x_dim==4){WTEST4=append(WTEST4,1)};  if  (AA1[2] < cvv & x_dim==5){WTEST5=append(WTEST5,0)}
+  if  (AA1[2]>= cvv & x_dim==5){WTEST5=append(WTEST5,1)}
+  
+  if  (AA1[4] < cvv & x_dim==1){WTEST1N=append(WTEST1N,0)};  if  (AA1[4] >= cvv & x_dim==1){WTEST1N=append(WTEST1N,1)};  if  (AA1[4] < cvv & x_dim==2){WTEST2N=append(WTEST2N,0)}
+  if  (AA1[4] >= cvv & x_dim==2){WTEST2N=append(WTEST2N,1)};  if  (AA1[4]< cvv & x_dim==3){WTEST3N=append(WTEST3N,0)};  if  (AA1[4] >= cvv & x_dim==3){WTEST3N=append(WTEST3N,1)}
+  if  (AA1[4] < cvv & x_dim==4){WTEST4N=append(WTEST4N,0)};  if  (AA1[4]>= cvv & x_dim==4){WTEST4N=append(WTEST4N,1)};  if  (AA1[4] < cvv & x_dim==5){WTEST5N=append(WTEST5N,0)}
+  if  (AA1[4]>= cvv & x_dim==5){WTEST5N=append(WTEST5N,1)}  
+  
+AA2=NULL 
+  for(nobs in NNOBSS)
+  { 
+  AAA2=NULL
+  xp_mat=XP_MAT[,1:nobs]    
+  if (MEAN==1) {fd_x = center.fd(Data2fd(y=xp_mat,argvals = t,basisobj = basis_fn))}
+  if (MEAN==0) {fd_x = (Data2fd(y=xp_mat,argvals = t,basisobj = basis_fn,lambda=llamd))}
+  for(fac in FAC)
+  {
+  band=1*nobs^(fac)
+  PCAA<- pca.fd(fd_x, nharm = nnbasis, centerfns = FALSE)
+  truc=15
+  px = cbind(PCAA$scores[,1:truc])                                                                                                                                                        
+  pn=cbind(px[,1:x_dim])
+  dpn=diff(pn)
+  dps=px[2:nrow(px),(x_dim+1):truc]
+  LLR1=lrvar(cbind(dpn,dps),cbind(dpn,dps),side=2)
+  OOMM=LLR1$omega
+  OOMM1=lrvar(cbind(dpn,dps),cbind(dpn,dps),side=1)$omega
+  pxn=px[2:nrow(px),]
+  ZEROS=NULL
+  for(i in 1:x_dim)
+  {
+  ZEROS=rbind(ZEROS,rep(0,nrow(dpn)))
+  }
+  mX=t(t(px[2:nrow(px),])-rbind(ZEROS, (OOMM[(x_dim+1):truc,1:x_dim]%*%solve(OOMM[1:x_dim,1:x_dim]) %*% t(dpn))) )
+  for(i in 1:ncol(mX))
+  {
+  mX[,i]=mX[,i]-mean(mX[,i])
+  }
+  cov1=t(mX)%*%(mX) /nobs
+  cov1[1:x_dim,(x_dim+1):truc] = cov1[1:x_dim,(x_dim+1):truc] -  OOMM1[1:x_dim,(x_dim+1):truc]+OOMM1[1:x_dim,1:x_dim]%*%solve(OOMM[1:x_dim,1:x_dim])%*%OOMM[1:x_dim,(x_dim+1):truc]
+  cov1[(x_dim+1):truc,1:x_dim] =  cov1[(x_dim+1):truc,1:x_dim] - t( OOMM1[1:x_dim,(x_dim+1):truc]-OOMM1[1:x_dim,1:x_dim]%*%solve(OOMM[1:x_dim,1:x_dim])%*%OOMM[1:x_dim,(x_dim+1):truc])
+ 
+  y=mX;  SS0=cov1;  EIGEN0=eigen(SS0,symmetric=TRUE)$vectors
+  yyy=t(t(EIGEN0)%*%t(y))
+  lrv10=OOMM[(x_dim+1):truc,(x_dim+1):truc] - (OOMM[(x_dim+1):truc,1:x_dim])%*%solve(OOMM[1:x_dim,1:x_dim])%*%(OOMM[1:x_dim,(x_dim+1):truc])
+  lrv100= matrix(0,nrow=truc,ncol=truc)
+  lrv100[(x_dim+1):truc,(x_dim+1):truc] = lrv10 
+  truc=x_dim+adddim;  py=yyy[,1:truc];NNOBS=nobs-1
+  pyz=as.matrix(py[,(truc-adddim+1):truc],ncol=adddim)
+  lrv1=lrvar(cbind(pyz),cbind(pyz),side=2)$omega
+
+  ppyz=colCumsums(pyz)
+  aa2=sum(diag(ppyz%*%solve(lrv1)%*%t(ppyz)))/(NNOBS^2)
+  AAA2=append(AAA2,aa2)
+}
+  AA2=append(AA2,AAA2)
+}
+
+  if  (AA2[1] < cvv & x_dim==1){TESTP1=append(TESTP1,0)};  if  (AA2[1] >= cvv & x_dim==1){TESTP1=append(TESTP1,1)};  if  (AA2[1] < cvv & x_dim==2){TESTP2=append(TESTP2,0)}
+  if  (AA2[1] >= cvv & x_dim==2){TESTP2=append(TESTP2,1)};  if  (AA2[1] < cvv & x_dim==3){TESTP3=append(TESTP3,0)};  if  (AA2[1] >= cvv & x_dim==3){TESTP3=append(TESTP3,1)}
+  if  (AA2[1] < cvv & x_dim==4){TESTP4=append(TESTP4,0)};  if  (AA2[1]>= cvv & x_dim==4){TESTP4=append(TESTP4,1)};  if  (AA2[1] < cvv & x_dim==5){TESTP5=append(TESTP5,0)}
+  if  (AA2[1]>= cvv & x_dim==5){TESTP5=append(TESTP5,1)}
+   
+  if  (AA2[3] < cvv & x_dim==1){TESTP1N=append(TESTP1N,0)};  if  (AA2[3] >= cvv & x_dim==1){TESTP1N=append(TESTP1N,1)};  if  (AA2[3] < cvv & x_dim==2){TESTP2N=append(TESTP2N,0)}
+  if  (AA2[3] >= cvv & x_dim==2){TESTP2N=append(TESTP2N,1)};  if  (AA2[3] < cvv & x_dim==3){TESTP3N=append(TESTP3N,0)};  if  (AA2[3] >= cvv & x_dim==3){TESTP3N=append(TESTP3N,1)}
+  if  (AA2[3] < cvv & x_dim==4){TESTP4N=append(TESTP4N,0)};  if  (AA2[3]>= cvv & x_dim==4){TESTP4N=append(TESTP4N,1)};  if  (AA2[3] < cvv & x_dim==5){TESTP5N=append(TESTP5N,0)}
+  if  (AA2[3]>= cvv & x_dim==5){TESTP5N=append(TESTP5N,1)} 
+ 
+  if  (AA2[2] < cvv & x_dim==1){WTESTP1=append(WTESTP1,0)};  if  (AA2[2] >= cvv & x_dim==1){WTESTP1=append(WTESTP1,1)};  if  (AA2[2] < cvv & x_dim==2){WTESTP2=append(WTESTP2,0)}
+  if  (AA2[2] >= cvv & x_dim==2){WTESTP2=append(WTESTP2,1)};  if  (AA2[2] < cvv & x_dim==3){WTESTP3=append(WTESTP3,0)};  if  (AA2[2] >= cvv & x_dim==3){WTESTP3=append(WTESTP3,1)}
+  if  (AA2[2] < cvv & x_dim==4){WTESTP4=append(WTESTP4,0)};  if  (AA2[2]>= cvv & x_dim==4){WTESTP4=append(WTESTP4,1)};  if  (AA2[2] < cvv & x_dim==5){WTESTP5=append(WTESTP5,0)}
+  if  (AA2[2]>= cvv & x_dim==5){WTESTP5=append(WTESTP5,1)}
+  
+  if  (AA2[4] < cvv & x_dim==1){WTESTP1N=append(WTESTP1N,0)};  if  (AA2[4] >= cvv & x_dim==1){WTESTP1N=append(WTESTP1N,1)};  if  (AA2[4] < cvv & x_dim==2){WTESTP2N=append(WTESTP2N,0)}
+  if  (AA2[4] >= cvv & x_dim==2){WTESTP2N=append(WTESTP2N,1)};  if  (AA2[4] < cvv & x_dim==3){WTESTP3N=append(WTESTP3N,0)};  if  (AA2[4] >= cvv & x_dim==3){WTESTP3N=append(WTESTP3N,1)}
+  if  (AA2[4] < cvv & x_dim==4){WTESTP4N=append(WTESTP4N,0)};  if  (AA2[4]>= cvv & x_dim==4){WTESTP4N=append(WTESTP4N,1)};  if  (AA2[4] < cvv & x_dim==5){WTESTP5N=append(WTESTP5N,0)}
+  if  (AA2[4]>= cvv & x_dim==5){WTESTP5N=append(WTESTP5N,1)}
+      
+   if(iter%%10==0&x_dim==1){print(round(c(iter,mean(TEST1),mean(TESTP1),mean(TEST1N),mean(TESTP1N),mean(WTEST1),mean(WTESTP1),mean(WTEST1N),mean(WTESTP1N),x_dim,adddim),digits=3))}
+   if(iter%%10==0&x_dim==2){print(round(c(iter,mean(TEST2),mean(TESTP2),mean(TEST2N),mean(TESTP2N),mean(WTEST2),mean(WTESTP2),mean(WTEST2N),mean(WTESTP2N),x_dim,adddim),digits=3))} 
+   if(iter%%10==0&x_dim==3){print(round(c(iter,mean(TEST3),mean(TESTP3),mean(TEST3N),mean(TESTP3N),mean(WTEST3),mean(WTESTP3),mean(WTEST3N),mean(WTESTP3N),x_dim,adddim),digits=3))}
+   if(iter%%10==0&x_dim==4){print(round(c(iter,mean(TEST4),mean(TESTP4),mean(TEST4N),mean(TESTP4N),mean(WTEST4),mean(WTESTP4),mean(WTEST4N),mean(WTESTP4N),x_dim,adddim),digits=3))} 
+   if(iter%%10==0&x_dim==5){print(round(c(iter,mean(TEST5),mean(TESTP5),mean(TEST5N),mean(TESTP5N),mean(WTEST5),mean(WTESTP5),mean(WTEST5N),mean(WTESTP5N),x_dim,adddim),digits=3))} 
+}
+}
+
+x_dim=0
+ranseed=ini.seed;set.seed(ranseed)
+if (x_dim==0&adddim==1){cvv=0.47};if (x_dim==0&adddim==2){cvv=0.74};if (x_dim==0&adddim==3){cvv=1}
+for (iter in 1:tsim){
+  if (MEAN==1) {aa=rnorm(4,0,1); bb=aa/sqrt(sum(aa^2)) ; mu=basismu[,1:4]%*%bb} else{mu=LB[,1]*0}  
+  
+  eigenxx=runif(sdim,minu,maxu);eigen_xp  = append(runif(x_dim+1,-noncoeff,noncoeff),eigenxx);eigen_x = (eigenxx) 
+  att1a=sample(sett1,x_dim+1);att1=NULL;att2=sample(sett2,sdim);rpert1=append(att1,att2);rpert2=append(att1a,att2)             
+  nnnn=max(NNOBSS);  basis_x = LB[,rpert1];  basis_xp = LB[,rpert2]
+  eta = matrix(rep(NA,((nnnn+70)*nt)),ncol=nnnn+70) ;  eta[,1] = LBB%*%cbind(rnorm(lbnumber2+1,0,1)*ARDfac^(0:(lbnumber2)));  eta2 = eta
+  x_mat = eta ;  xp_mat = eta ;  pnx_mat = eta;  pnx_mat_p = eta;  psx_mat = eta;  psx_mat_p = eta
+  x_mat[,1] =   LBB%*%cbind(rnorm(lbnumber2+1,0,1)*ARDfac^(0:(lbnumber2)));  xp_mat[,1] =   x_mat[,1]
+  
+  for (jiter in 2:((nnnn+70))){
+    eta2[,jiter] = LBB%*%cbind(rnorm(lbnumber2+1,0,1)*ARDfac^(0:(lbnumber2)))
+    x_mat[,jiter] = operator(basis_x,eigen_x, x_mat[,jiter-1] ,t) +1*eta2[,jiter]  
+    xp_mat[,jiter] = operator(basis_xp,eigen_xp, xp_mat[,jiter-1] ,t) +1*eta2[,jiter]  
+    aa=0
+    bb=inner(xp_mat[,jiter],basis_xp[,x_dim+1],t)*basis_xp[,x_dim+1]	
+    pnx_mat[,jiter] = aa  
+    pnx_mat_p[,jiter] = bb
+    psx_mat[,jiter] = x_mat[,jiter] - aa     + mu
+    psx_mat_p[,jiter] = xp_mat[,jiter] - bb   + mu
+    }
+  
+  nx_mat=t(apply(pnx_mat, 1, cumsum));  nx_mat_p=t(apply(pnx_mat_p, 1, cumsum))
+  x_mat= nx_mat+psx_mat;  xp_mat = nx_mat_p + psx_mat_p 
+  x_mat=x_mat[,71:ncol(x_mat)];  xp_mat=xp_mat[,71:ncol(xp_mat)]
+  X_MAT=x_mat;  XP_MAT=xp_mat
+  AA1=NULL
+  for(nobs in NNOBSS)
+  { 
+  AAA1=NULL
+  x_mat=X_MAT[,1:nobs]
+  if (MEAN==1) {fd_x = center.fd(Data2fd(y=x_mat,argvals = t,basisobj = basis_fn))}
+  if (MEAN==0) {fd_x = (Data2fd(y=x_mat,argvals = t,basisobj = basis_fn,lambda=llamd))}
+  for(fac in FAC)
+  {
+  band=1*nobs^(fac)
+  PCAA<- pca.fd(fd_x, nharm = nnbasis, centerfns = FALSE)
+  truc=15;  px = cbind(PCAA$scores[,1:truc])      
+  dps=px[1:nrow(px),(x_dim+1):truc]    
+  LLR1=lrvar(cbind(dps),cbind(dps),side=2)
+  OOMM=LLR1$omega
+  OOMM1=lrvar(cbind(dps),cbind(dps),side=1)$omega
+  mX=px;  cov1=t(mX)%*%(mX) /nobs
+   
+  y=mX;  SS0=cov1;  EIGEN0=eigen(SS0,symmetric=TRUE)$vectors
+  
+  yyy=t(t(EIGEN0)%*%t(y))
+
+  lrv10=OOMM[(x_dim+1):truc,(x_dim+1):truc]
+  lrv100= matrix(0,nrow=truc,ncol=truc)
+  lrv100[(x_dim+1):truc,(x_dim+1):truc] = lrv10 
+  truc=x_dim+adddim; py=cbind(yyy[,1:truc])
+  NNOBS=nobs
+  pyz=as.matrix(py[,(truc-adddim+1):truc],ncol=adddim)
+  lrv1=lrvar(cbind(pyz),cbind(pyz),side=2)$omega
+  ppyz=colCumsums(pyz)
+  aa=sum(diag(ppyz%*%solve(lrv1)%*%t(ppyz)))/(NNOBS^2)
+  AAA1=append(AAA1,aa)
+}        
+AA1=append(AA1,AAA1)
+}
+
+  if  (AA1[1] < cvv & x_dim==0){TEST0=append(TEST0,0)};  if  (AA1[1] >= cvv & x_dim==0){TEST0=append(TEST0,1)}
+  if  (AA1[3] < cvv & x_dim==0){TEST0N=append(TEST0N,0)};  if  (AA1[3] >= cvv & x_dim==0){TEST0N=append(TEST0N,1)}
+  if  (AA1[2] < cvv & x_dim==0){WTEST0=append(WTEST0,0)};  if  (AA1[2] >= cvv & x_dim==0){WTEST0=append(WTEST0,1)}
+  if  (AA1[4] < cvv & x_dim==0){WTEST0N=append(WTEST0N,0)};  if  (AA1[4] >= cvv & x_dim==0){WTEST0N=append(WTEST0N,1)}
+AA2=NULL 
+  for(nobs in NNOBSS)
+  { 
+  AAA2=NULL;  xp_mat=XP_MAT[,1:nobs]   
+  if (MEAN==1) {fd_x = center.fd(Data2fd(y=xp_mat,argvals = t,basisobj = basis_fn))}
+  if (MEAN==0) {fd_x = (Data2fd(y=xp_mat,argvals = t,basisobj = basis_fn,lambda=llamd))}
+  for(fac in FAC)
+  {
+  band=1*nobs^(fac)
+  PCAA<- pca.fd(fd_x, nharm = nnbasis, centerfns = FALSE)
+  truc=15;  px = cbind(PCAA$scores[,1:truc]);  dps=px[1:nrow(px),(x_dim+1):truc]
+  LLR1=lrvar(cbind(dps),cbind(dps),side=2)
+  OOMM=LLR1$omega
+  OOMM1=lrvar(cbind(dps),cbind(dps),side=1)$omega
+  mX=px;  cov1=t(mX)%*%(mX) /nobs
+  y=mX;  SS0=cov1;  EIGEN0=eigen(SS0,symmetric=TRUE)$vectors
+  yyy=t(t(EIGEN0)%*%t(y))
+  lrv10=OOMM[(x_dim+1):truc,(x_dim+1):truc] 
+  lrv100= matrix(0,nrow=truc,ncol=truc)
+  lrv100[(x_dim+1):truc,(x_dim+1):truc] = lrv10 
+  truc=x_dim+adddim;py=cbind(yyy[,1:truc])
+  NNOBS=nobs
+  pyz=as.matrix(py[,(truc-adddim+1):truc],ncol=adddim)
+  lrv1=lrvar(cbind(pyz),cbind(pyz),side=2)$omega
+  ppyz=colCumsums(pyz)
+  aa2=sum(diag(ppyz%*%solve(lrv1)%*%t(ppyz)))/(NNOBS^2)
+  AAA2=append(AAA2,aa2)
+}                       
+  AA2=append(AA2,AAA2)
+}
+  if  (AA2[1] < cvv & x_dim==0){TESTP0=append(TESTP0,0)};  if  (AA2[1] >= cvv & x_dim==0){TESTP0=append(TESTP0,1)};  if  (AA2[3] < cvv & x_dim==0){TESTP0N=append(TESTP0N,0)}
+  if  (AA2[3] >= cvv & x_dim==0){TESTP0N=append(TESTP0N,1)};  if  (AA2[2] < cvv & x_dim==0){WTESTP0=append(WTESTP0,0)};  if  (AA2[2] >= cvv & x_dim==0){WTESTP0=append(WTESTP0,1)}
+  if  (AA2[4] < cvv & x_dim==0){WTESTP0N=append(WTESTP0N,0)};  if  (AA2[4] >= cvv & x_dim==0){WTESTP0N=append(WTESTP0N,1)};
+  if(iter%%10==0&x_dim==0){print(round(c(iter,mean(TEST0),mean(TESTP0),mean(TEST0N),mean(TESTP0N),mean(WTEST0),mean(WTESTP0),mean(WTEST0N),mean(WTESTP0N),x_dim,adddim),digits=3))} 
+}
+}
+
+
+
+
+zz1=c(round(mean(TEST0),digits=3),round(mean(TEST1),digits=3),round(mean(TEST2),digits=3),round(mean(TEST3),digits=3),round(mean(TEST4),digits=3))
+#round(mean(TEST5),digits=3)
+zz2=c(round(mean(TESTP0),digits=3),round(mean(TESTP1),digits=3),round(mean(TESTP2),digits=3),round(mean(TESTP3),digits=3),round(mean(TESTP4),digits=3))
+#round(mean(TESTP5),digits=3)
+zz3=c(round(mean(TEST0N),digits=3),round(mean(TEST1N),digits=3),round(mean(TEST2N),digits=3),round(mean(TEST3N),digits=3),round(mean(TEST4N),digits=3))
+#round(mean(TEST5N),digits=3)
+zz4=c(round(mean(TESTP0N),digits=3),round(mean(TESTP1N),digits=3),round(mean(TESTP2N),digits=3),round(mean(TESTP3N),digits=3),round(mean(TESTP4N),digits=3))
+#round(mean(TESTP5N),digits=3)
+zz5=c(round(mean(WTEST0),digits=3),round(mean(WTEST1),digits=3),round(mean(WTEST2),digits=3),round(mean(WTEST3),digits=3),round(mean(WTEST4),digits=3))
+#round(mean(WTEST5),digits=3)
+zz6=c(round(mean(WTESTP0),digits=3),round(mean(WTESTP1),digits=3),round(mean(WTESTP2),digits=3),round(mean(WTESTP3),digits=3),round(mean(WTESTP4),digits=3))
+#round(mean(WTESTP5),digits=3)
+zz7=c(round(mean(WTEST0N),digits=3),round(mean(WTEST1N),digits=3),round(mean(WTEST2N),digits=3),round(mean(WTEST3N),digits=3),round(mean(WTEST4N),digits=3))
+#round(mean(WTEST5N),digits=3)
+zz8=c(round(mean(WTESTP0N),digits=3),round(mean(WTESTP1N),digits=3),round(mean(WTESTP2N),digits=3),round(mean(WTESTP3N),digits=3),round(mean(WTESTP4N),digits=3))
+#round(mean(WTESTP5N),digits=3)
+
+rbind(zz1,zz3,zz2,zz4)*100
+rbind(zz5,zz7,zz6,zz8)*100
+
+
+
+
+

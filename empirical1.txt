@@ -1,0 +1,292 @@
+
+#######################################################################
+# 1. TEST for the dimension of the attractor space
+##### #################################################################
+
+library(fda);library(tseries);library(sandwich);library(sde);library(variables);library(basefun);library(polynom);library(expm);library(GMCM);library(arm);library(matrixStats)  
+setwd("C:/code_location")
+load("empirical_data1.Rdata")
+inner = dget("inprod.R");operator = dget("operator.R");lrvar = dget("lrvar_6a.R");proj = dget("proj.R")
+nint<-function(f)  ## numerical integration on [0, 1]
+{ leng<-grid[2]-grid[1];  I1<-f;  fac1<-(sum(leng*I1[1:(length(I1)-1)])+sum(leng*I1[2:length(I1)]))/2;  fac1} 
+
+  dmat = (logit(dat));  dage=mage:Mage;   ddmat=dmat;  nnbasis=18 ; hhhh=10
+  adddim=1;  kernel=1;   TREND=1 ; MEAN=1 ; fac=2/5 
+  
+ 
+  basis_fn = create.bspline.basis(rangeval = c(mage,Mage),nbasis = nnbasis,norder=3)
+  
+  x_mat=t(dmat)
+  XXX_MAT=x_mat
+  
+  X_MAT=x_mat
+  x_mat=x_mat[,1:(ncol(x_mat))]
+  nobs = ncol(x_mat)
+  if (TREND==1){
+  ones=rep(1,ncol(x_mat))
+  ttime=rep(1:ncol(x_mat))
+  VV=cbind(ones,ttime)
+  x_mat=t(t(x_mat)-VV%*%solve(t(VV)%*%VV)%*%t(VV)%*%t(x_mat))
+  }
+  
+  
+  fd_x = center.fd(Data2fd(y=x_mat,argvals = dage,basisobj = basis_fn)) 
+  PCAA<- pca.fd(fd_x, nharm = nnbasis, centerfns = FALSE)
+  band=nobs^(fac)
+  
+  A=NULL;AA=NULL
+  for (x_dim in 1:2)
+  {
+  truc=hhhh
+  px = cbind(PCAA$scores[,1:truc])
+   if (TREND==1){
+   ones=rep(1,nrow(px))
+  ttime=rep(1:nrow(px))
+  VV=cbind(ones,ttime)
+  px=px-VV%*%solve(t(VV)%*%VV)%*%t(VV)%*%px
+  }
+  
+  pn=cbind(px[,1:x_dim])
+  dpn=diff(pn)
+  dps=px[2:nrow(px),(x_dim+1):truc]
+  LLR1=lrvar(cbind(dpn,dps),cbind(dpn,dps),side=2)
+  OOMM=LLR1$omega
+  OOMM1=lrvar(cbind(dpn,dps),cbind(dpn,dps),side=1)$omega
+    
+  pxn=px[2:nrow(px),]
+  ZEROS=NULL
+  for(i in 1:x_dim)
+  {
+  ZEROS=rbind(ZEROS,rep(0,nrow(dpn)))
+  }
+    
+  mX=t(t(px[2:nrow(px),])-rbind(ZEROS, (OOMM[(x_dim+1):truc,1:x_dim]%*%solve(OOMM[1:x_dim,1:x_dim]) %*% t(dpn))) )
+ if (TREND==1){ones=rep(1,nrow(mX))
+  ttime=rep(1:nrow(mX))
+  VV=cbind(ones,ttime)
+  mX=mX-VV%*%solve(t(VV)%*%VV)%*%t(VV)%*%mX
+  }
+  
+  cov1=t(mX)%*%(mX) /nobs
+  cov1[1:x_dim,(x_dim+1):truc] = cov1[1:x_dim,(x_dim+1):truc] -  OOMM1[1:x_dim,(x_dim+1):truc]+OOMM1[1:x_dim,1:x_dim]%*%solve(OOMM[1:x_dim,1:x_dim])%*%OOMM[1:x_dim,(x_dim+1):truc]
+  cov1[(x_dim+1):truc,1:x_dim] =  cov1[(x_dim+1):truc,1:x_dim] - t( OOMM1[1:x_dim,(x_dim+1):truc]-OOMM1[1:x_dim,1:x_dim]%*%solve(OOMM[1:x_dim,1:x_dim])%*%OOMM[1:x_dim,(x_dim+1):truc])
+  
+  y=mX
+  SS0=cov1
+  EIGEN0=eigen(SS0,symmetric=TRUE)$vectors
+  
+  yyy=t(t(EIGEN0)%*%t(y))
+  truc=x_dim+adddim
+  py=yyy[,1:truc] 
+  
+NNOBS=nobs
+pyz=as.matrix(py[,(truc-adddim+1):truc],ncol=adddim)
+lrv1=lrvar(cbind(pyz),cbind(pyz),side=2)$omega
+
+ppyz=colCumsums(pyz)
+aa=sum(diag(ppyz%*%solve(lrv1)%*%t(ppyz)))/(NNOBS^2)
+AA=append(AA,aa)
+} 
+	
+  x_dim=0
+  truc=hhhh
+
+ px = cbind(PCAA$scores[,1:truc])
+    if (TREND==1){
+   ones=rep(1,nrow(px))
+  ttime=rep(1:nrow(px))
+  VV=cbind(ones,ttime)
+  px=px-VV%*%solve(t(VV)%*%VV)%*%t(VV)%*%px
+  }
+  
+  dps=px[1:nrow(px),(x_dim+1):truc]    
+  LLR1=lrvar(cbind(dps),cbind(dps),side=2)
+  OOMM=LLR1$omega
+  OOMM1=lrvar(cbind(dps),cbind(dps),side=1)$omega
+  
+  mX=px
+  cov1=t(mX)%*%(mX) /nobs
+   
+  y=mX
+  SS0=cov1
+  EIGEN0=eigen(SS0,symmetric=TRUE)$vectors
+  
+  yyy=t(t(EIGEN0)%*%t(y))
+truc=x_dim+adddim
+py=cbind(yyy[,1:truc])
+  
+NNOBS=nobs
+pyz=as.matrix(py[,(truc-adddim+1):truc],ncol=adddim)
+lrv1=lrvar(cbind(pyz),cbind(pyz),side=2)$omega
+ppyz=colCumsums(pyz)
+aa=sum(diag(ppyz%*%solve(lrv1)%*%t(ppyz)))/(NNOBS^2)
+AA=append(aa,AA)
+A=rbind(A,AA)
+print(A)
+
+
+
+
+
+
+
+#######################################################################
+# 2. Test Results for (4.14) 
+##### #################################################################
+  ddmat2= ddmat[1:(nrow(ddmat)),]
+  fdata= (Data2fd(argvals = dage, y=t(ddmat2), basisobj = basis_fn))
+  t=seq(mage,Mage,0.1)
+  grid=t
+  SS=eval.fd(fdata,t)
+
+  yage = (1/(25))*(t >= 15 & t< 40)  
+  oage = (1/(24))*(t > 40 & t<= 64)    
+  aage = (1/(64-15))*(t >= 15 & t<= 64)  
+  aaage = oage-yage
+
+   TREND=1
+
+
+   CC=NULL
+   for (pree in c(1,2,3))
+   {
+   x_mat=SS 
+   x_dim=1
+   if (pree==1) {cx=yage; cx=cx/sqrt(inner(cx,cx,t))}
+   if (pree==2) {cx=oage; cx=cx/sqrt(inner(cx,cx,t))}
+   if (pree==3) {cx=aaage; cx=cx/sqrt(inner(cx,cx,t))}
+  
+    if (TREND==1){
+  ones=rep(1,ncol(x_mat))
+  ttime=rep(1:ncol(x_mat))
+  VV=cbind(ones,ttime)
+  x_mat=t(t(x_mat)-VV%*%solve(t(VV)%*%VV)%*%t(VV)%*%t(x_mat))
+  }
+  z_mat=x_mat
+ 
+  for (jiter in 1:ncol(x_mat)){
+    cxx=nint(z_mat[,jiter]*cx)*cx
+    x_mat[,jiter] = z_mat[,jiter] - cxx
+  }  
+ 
+  if (MEAN==1) {fd_x = center.fd(Data2fd(y=x_mat,argvals = t,basisobj = basis_fn))}
+  if (MEAN==0) {fd_x = (Data2fd(y=x_mat,argvals = t,basisobj = basis_fn,lambda=llamd))}
+
+ # band=fac*nobs^(expp)
+  band=1*nobs^(2/5)
+  PCAA<- pca.fd(fd_x, nharm = nnbasis, centerfns = FALSE)
+  truc=10
+  px = cbind(PCAA$scores[,1:truc])
+     if (TREND==1){
+  ones=rep(1,nrow(px))
+  ttime=rep(1:nrow(px))
+  VV=cbind(ones,ttime)
+  px=px-VV%*%solve(t(VV)%*%VV)%*%t(VV)%*%px  } 
+  
+  dps=px[1:nrow(px),1:truc]
+  LLR1=lrvar(cbind(dps),cbind(dps),side=2)
+  OOMM=LLR1$omega
+  OOMM1=lrvar(cbind(dps),cbind(dps),side=1)$omega
+  mX=px
+  cov1=t(mX)%*%(mX) /nobs
+  
+  y=mX
+
+  SS0=cov1
+  EIGEN0=eigen(SS0,symmetric=TRUE)$vectors
+  
+  yyy=t(t(EIGEN0)%*%t(y))
+
+  lrv10=OOMM[(x_dim+1):truc,(x_dim+1):truc] 
+  lrv100= matrix(0,nrow=truc,ncol=truc)
+  lrv100[(x_dim+1):truc,(x_dim+1):truc] = lrv10 
+
+truc=1
+py=cbind(yyy[,1:truc])
+
+NNOBS=nobs
+
+pyz=as.matrix(py[,(truc-adddim+1):truc],ncol=adddim)
+lrv1=lrvar(cbind(pyz),cbind(pyz),side=2)$omega
+
+ppyz=colCumsums(pyz)
+aa=sum(diag(ppyz%*%solve(lrv1)%*%t(ppyz)))/(NNOBS^2)
+CC=append(CC,aa)
+}
+print(CC)
+
+
+
+#######################################################################
+# 3. Test Results for (4.14) 
+##### #################################################################
+
+  ddmat2= ddmat[1:(nrow(ddmat)),]
+  fdata= (Data2fd(argvals = dage, y=t(ddmat2), basisobj = basis_fn))
+  t=seq(mage,Mage,0.1)
+  grid=t
+
+  SS=eval.fd(fdata,t)
+  yage = (1/(25))*(t >= 15 & t< 40)  
+  oage = (1/(24))*(t > 40 & t<= 64)    
+  aaage = oage-yage
+	
+  TREND=1
+ 
+   CC=NULL
+   for (pree in c(1,2,3))
+   {
+
+   if (pree==1) {cx=yage; cx=cx/sqrt(inner(cx,cx,t))}
+   if (pree==2) {cx=oage; cx=cx/sqrt(inner(cx,cx,t))}
+   if (pree==3) {cx=aaage; cx=cx/sqrt(inner(cx,cx,t))}
+   x_mat = SS
+   if (TREND==1){
+  ones=rep(1,ncol(x_mat))
+  ttime=rep(1:ncol(x_mat))
+  VV=cbind(ones,ttime)
+  x_mat=t(t(x_mat)-VV%*%solve(t(VV)%*%VV)%*%t(VV)%*%t(x_mat))
+  }
+  z_mat=x_mat
+ 
+ 
+ dps=NULL
+  for (jiter in 1:ncol(x_mat)){
+    dps = append(dps,nint(z_mat[,jiter]*cx))
+  }  
+  dps=cbind(dps)
+    if (TREND==1){
+  ones=rep(1,nrow(dps))
+  ttime=rep(1:nrow(dps))
+  VV=cbind(ones,ttime)
+  dps=((dps)-VV%*%solve(t(VV)%*%VV)%*%t(VV)%*%(dps))
+  }
+
+  band=nobs^(2/5)
+  LLR1=lrvar(cbind(dps),cbind(dps),side=2)
+  OOMM=LLR1$omega
+ 
+  mX=dps
+  cov1=t(mX)%*%(mX) /nobs
+  
+  y=mX
+  SS0=cov1
+  EIGEN0=eigen(SS0,symmetric=TRUE)$vectors
+  
+  yyy=t(t(EIGEN0)%*%t(y))
+
+  xx_dim=0
+  truc=xx_dim+1
+  py=cbind(yyy[,1:truc])
+
+NNOBS=nobs
+pyz=as.matrix(py[,(truc-adddim+1):truc],ncol=adddim)
+lrv1=lrvar(cbind(pyz),cbind(pyz),side=2)$omega
+
+ppyz=colCumsums(pyz)
+aa=sum(diag(ppyz%*%solve(lrv1)%*%t(ppyz)))/(NNOBS^2)
+CC=append(CC,aa)
+}
+print(CC)
+		   
+       
